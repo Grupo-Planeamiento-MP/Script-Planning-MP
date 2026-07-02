@@ -1,0 +1,16 @@
+﻿Tipo Producto,Tipo de Compra,Diferencia en meses
+Abrazadera,Importación,2.176470588235294
+Accesorios,Importación,2.430193653804876
+Acople,Importación,2.0975666773111286
+Adaptador,Local,0.20301515563297187
+Conexion,Importación,3.5305731653412056
+Consumibles,Local,0.7726093088348807
+Ensamble,Local,0.15714285714285717
+Espiga,Importación,4.070964854402834
+Ferrula,Importación,3.1807132008042673
+Manguera,Importación,2.976499533088781
+Miscelaneo,Local,0.1846514745308311
+Oring,Importación,2.27951581935053
+Protector,Local,0.21586345381526104
+Repuestos,Importación,2.569123480747982
+Herramientas,Importación,2.076942355889724
