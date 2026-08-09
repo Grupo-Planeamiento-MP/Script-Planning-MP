@@ -14,7 +14,7 @@ base = Path(antes + sep)
 Linea_Negocio=Linea_Negocio
 print("CalculoStock0 - OK")
 #exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Conexiones_a_SAP"/"KardexGeneralProv.py", encoding="utf-8-sig").read())
-dfkardexorigen = pd.read_csv(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"dfkardexorigen.txt", sep="|", encoding="utf-8",on_bad_lines="skip")
+dfkardexorigen = pd.read_csv(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Archivos_Compartidos"/"Querys automatizados"/"dfkardexorigen.txt", sep="|", encoding="utf-8",on_bad_lines="skip")
 
 dfkardexHC=dfkardexorigen[dfkardexorigen["Nombre de grupo"]==Linea_Negocio]
 

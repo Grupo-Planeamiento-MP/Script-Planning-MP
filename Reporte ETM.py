@@ -30,7 +30,7 @@ exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Pro
 exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"Inventario.py", encoding="utf-8").read()) #ResumenInvSAPBOAstec
 exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"ConexionDatos.py", encoding="utf-8").read()) #dfResumenLeadTimes , df_ensambleETM, #Reporte_Precios_Local_Imp.txt
 exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"CalculoStock0.py", encoding="utf-8").read())
-dfActiveCode = pd.read_table(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"dfActiveCode.txt", sep='\t',encoding='utf-8',engine='python')
+dfActiveCode = pd.read_csv(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Archivos_Compartidos"/"Querys automatizados"/"dfActiveCode.txt", sep='\t',encoding='utf-8',engine='python')
 dfActiveCode = dfActiveCode.query("`Linea de Negocio` in @Lineas_Asociadas")
 #dfActiveCode = dfActiveCode[dfActiveCode['Codigo_SAP'].isin(['A18110000283'])]
 

@@ -224,23 +224,24 @@ ruta_excel_dataG = base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Docume
 df_proyectos = pd.read_excel(ruta_excel_dataG/'Proyectos.xlsx', sheet_name="Hoja1")
 df_proyectos = df_proyectos[df_proyectos['Linea negocio'] == Linea_Negocio]
 df_remplazos = df_proyectos[df_proyectos["Grupo Remplazo"].notna()]
-
+if Linea_Negocio == "MANGUERA Y CONEXION":
 ## Reportes ##
-df_IGS = pd.read_excel(ruta_excel/'PL MPSA Winner TK Hoses Apr 8th 2025.xlsx', sheet_name="Sheet1",header=4)
-df_Osma = pd.read_excel(ruta_excel/'Lista de precios - Ferretería Osma.xlsx', sheet_name="FERRETERÍA OSMA",header=1) 
-df_Osma = df_Osma['Codigo SAP MG'].unique()
-df_Osma = set(df_Osma)
-df_Cisge = pd.read_excel(ruta_excel/'Lista de precios - Cisge.xlsx', sheet_name="COMERCIAL CISGE SAC 2026",header=1)
-df_Cisge = df_Cisge['Código SAP'].unique()
-df_Cisge = set(df_Cisge)
-df_China = pd.read_excel(ruta_excel/'Lista Final Adap Conex Mangueras.xlsx', sheet_name="Hoja1")
-df_China_sap = (
-    df_China.loc[df_China['GROUP'].isna(), 'SAP']
-    .dropna()
-    .unique()
-)
-df_China_Group = df_China['GROUP'].dropna().unique()
-df_China_Group = set(df_China_Group)
+    df_IGS = pd.read_excel(ruta_excel/'PL MPSA Winner TK Hoses Apr 8th 2025.xlsx', sheet_name="Sheet1",header=4)
+    df_Osma = pd.read_excel(ruta_excel/'Lista de precios - Ferretería Osma.xlsx', sheet_name="FERRETERÍA OSMA",header=1) 
+    df_Osma = df_Osma['Codigo SAP MG'].unique()
+    df_Osma = set(df_Osma)
+    df_Cisge = pd.read_excel(ruta_excel/'Lista de precios - Cisge.xlsx', sheet_name="COMERCIAL CISGE SAC 2026",header=1)
+    df_Cisge = df_Cisge['Código SAP'].unique()
+    df_Cisge = set(df_Cisge)
+    df_China = pd.read_excel(ruta_excel/'Lista Final Adap Conex Mangueras.xlsx', sheet_name="Hoja1")
+    df_China_sap = (
+        df_China.loc[df_China['GROUP'].isna(), 'SAP']
+        .dropna()
+        .unique()
+        )
+    df_China_Group = df_China['GROUP'].dropna().unique()
+    df_China_Group = set(df_China_Group)
+
 df_Unicon_SAP_Cod = pd.read_excel(ruta_excel/'ContratoCsgUNICON.xlsx', sheet_name="Hoja1")
 
 df_Unicon_SAP_Cod=df_Unicon_SAP_Cod[["Código Articulo","SAP"]]
