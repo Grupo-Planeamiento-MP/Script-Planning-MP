@@ -3,17 +3,24 @@ import numpy as np
 import os
 from pathlib import Path
 import getpass
+import logging
 
-### Detecta ruta del script y redirige las demas direcciones path ###
-rutainicial = Path.home()
-usuario = getpass.getuser()
-antes, sep, despues = str(rutainicial).partition(usuario)
-base = Path(antes + sep)
-#Linea_Negocio="SIST DE LUBRICACION"
+
+_log = logging.getLogger("Codigo.AnalisisConsumosSAP")
+
+if "base" not in dir():
+    base = Path(__file__).resolve().parent
+
+
+_log.info("[AnalisisConsumosSAP] Inicio")
+
 Linea_Negocio=Linea_Negocio
 
-#exec(open(base/"C:/Users/planner01/MARCO PERUANA SA/Planeamiento de Inventarios - Documents/Proyectos/Python/Reporte de abastecimiento LI/Codigo/TransformCleanKardexLI.py", encoding="utf-8").read())
-exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"TransformCleanKardex.py", encoding="utf-8").read())
+_log.info("[AnalisisConsumosSAP] Ejecutando transformcleankardex.py")
+
+#exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"transformcleankardex.py", encoding="utf-8").read())
+exec(open(base / "transformcleankardex.py", encoding="utf-8").read())
+
 
 # Define la ruta del archivo Excel
 dfprevKardex= dfkardexorigen
@@ -124,3 +131,5 @@ dfParetoABC['Porcentaje acumulado'] = dfParetoABC['Valor unificado'].cumsum() / 
 dfParetoABC['Clasificación Pareto'] = 'C'
 dfParetoABC.loc[dfParetoABC['Porcentaje acumulado'] <= 0.8, 'Clasificación Pareto'] = 'A'
 dfParetoABC.loc[(dfParetoABC['Porcentaje acumulado'] > 0.8) & (dfParetoABC['Porcentaje acumulado'] <= 0.95), 'Clasificación Pareto'] = 'B'
+
+_log.info("[AnalisisConsumosSAP] Fin")

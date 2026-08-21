@@ -15,21 +15,30 @@ import os
 from datetime import datetime
 from pathlib import Path
 import getpass
+import logging
 
-### Detecta ruta del script y redirige las demas direcciones path ###
-rutainicial = Path.home()
-usuario = getpass.getuser()
-antes, sep, despues = str(rutainicial).partition(usuario)
-base = Path(antes + sep)
 
+base = Path(__file__).resolve().parent
+
+_log = logging.getLogger("Codigo.LimpiezaLT")
+
+_log.info("[LimpiezaLT] Cargando dfResumenLeadTimes.txt")
 
 #Conexion a datos
-dfResumenLeadTimes = pd.read_csv(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Archivos_Compartidos"/"Resultados"/"Estimacion de Fechas"/"dfResumenLeadTimes.txt",sep=',',encoding='utf-8')
+dfResumenLeadTimes = pd.read_csv(
+    base / "dfresumenleadtimes.txt",
+    sep=",",
+    encoding="utf-8"
+)
+
 dfResumenLeadTimes=dfResumenLeadTimes[dfResumenLeadTimes["Sociedad"]=="MP"]
 dfResumenLeadTimes = dfResumenLeadTimes.rename(columns={'Diferencia en meses': 'LT'})
 #dfResumenLeadTimes = dfResumenLeadTimes[dfResumenLeadTimes["TrnspName"] != "TERRE"]
 
-df_LT_referencial = pd.read_excel(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Datas"/"Data General"/'LT_Referencial.xlsx', sheet_name="Hoja1")
+df_LT_referencial = pd.read_excel(
+    base / "lt_referencial.xlsx",
+    sheet_name="Hoja1"
+)
 df_LT_referencial['ItemCode'] = df_LT_referencial['ItemCode'].astype(str)
 df_LT_referencial['LT_Referencial'] = pd.to_numeric(df_LT_referencial['LT_Referencial'])
 
@@ -55,6 +64,8 @@ dfResumenLeadTimesMP = dfResumenLeadTimes.merge(
 
 dfResumenLeadTimesMP = dfResumenLeadTimesMP.sort_values(["ItemCode", "Max_FechIN"], ascending=[True, False])
 dfResumenLeadTimesMP["tiene_lt_ref"] = dfResumenLeadTimesMP["LT_Referencial"].notna()
+
+_log.info("[LimpiezaLT] FIN")
 
 # =====================================
 # 2. FUNCIONES AUXILIARES

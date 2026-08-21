@@ -1,18 +1,25 @@
 import pandas as pd
 import numpy as np
 import os
+import logging
 from pathlib import Path
 import getpass
 
+_log = logging.getLogger("Codigo.TransformCleanKardex")
 
 ### Detecta ruta del script y redirige las demas direcciones path ###
-rutainicial = Path.home()
-usuario = getpass.getuser()
-antes, sep, despues = str(rutainicial).partition(usuario)
-base = Path(antes + sep)
+if "base" not in dir():
+    base = Path(__file__).resolve().parent
 
-dfkardexorigen = pd.read_csv(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Archivos_Compartidos"/"Querys automatizados"/"dfkardexorigen.txt", sep="|", encoding="utf-8")
+
+_log.info("[TransformCleanKardex] Inicio")
+
+
+#dfkardexorigen = pd.read_csv(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Archivos_Compartidos"/"Querys automatizados"/"dfkardexorigen.txt", sep="|", encoding="utf-8")
+#dfkardexorigen = pd.read_csv(base / "MARCO PERUANA SA" /"Planeamiento de Inventarios - Documents" /"Proyectos" / "Python" /"Pruebas Linux" / "dfkardexorigen.txt", sep="|", encoding="utf-8")
+dfkardexorigen = pd.read_csv(base / "dfkardexorigen.txt",sep="|", encoding="utf-8")
 dfkardexorigen['Fecha de contabilización'] = pd.to_datetime(dfkardexorigen['Fecha de contabilización'])
+
 
 # Eliminar columnas no deseadas
 dfkardexorigen = dfkardexorigen.drop(columns=["Número de operación", "Status", "Clave de documento creada"])
@@ -29,13 +36,30 @@ dfkardexorigen["Codigo_Conc"] = "MP" + dfkardexorigen["Número de artículo"]
 dfkardexorigen["Codigo_Conc"] = dfkardexorigen["Codigo_Conc"].astype(str)
 dfkardexorigen["Código de almacén"] = dfkardexorigen["Código de almacén"].astype(str)
 
+_log.info("[TransformCleanKardex] Cargando almacenes.txt")
 
 # Unir con Maestro Almacenes (2)
-df_maestro_almacenes = pd.read_table(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"Almacenes.txt", encoding='utf-8', sep='\t', quotechar='"', low_memory=False)
+#df_maestro_almacenes = pd.read_table(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"almacenes.txt", encoding='utf-8', sep='\t', quotechar='"', low_memory=False)
+df_maestro_almacenes = pd.read_table(
+    base / "almacenes.txt",
+    encoding="utf-8",
+    sep="\t",
+    quotechar='"',
+    low_memory=False
+)
 dfkardexorigen = dfkardexorigen.merge(df_maestro_almacenes[['Código de almacén', 'Nombre de almacén', 'TIPO']], on="Código de almacén", how="left")
 
+_log.info("[TransformCleanKardex] Cargando maestro_art.txt")
+
 # Unir con Maestro Articulos
-df_maestro_articulos = pd.read_table(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"Maestro Art.txt", encoding='utf-8', sep='\t', quotechar='"', low_memory=False)
+#df_maestro_articulos = pd.read_table(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"maestro_art.txt", encoding='utf-8', sep='\t', quotechar='"', low_memory=False)
+df_maestro_articulos = pd.read_table(
+    base / "maestro_art.txt",
+    encoding="utf-8",
+    sep="\t",
+    quotechar='"',
+    low_memory=False
+)
 dfkardexorigen = dfkardexorigen.merge(df_maestro_articulos[['Codigo Concateando', 'Codigo Unico']], left_on="Codigo_Conc", right_on="Codigo Concateando", how="left")
 
 # Agregar columna personalizada "Control"
@@ -45,7 +69,15 @@ dfkardexorigen["Control"] = np.where(dfkardexorigen["Codigo Unico"].isnull(), df
 dfkardexorigen = dfkardexorigen.rename(columns={"Control": "Maestro Articulos.Codigo Unico"})
 
 # Unir con Maestro_Soc
-df_maestro_soc = pd.read_table(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"MaestroSoc.txt", encoding='utf-8', sep='\t', quotechar='"', low_memory=False)
+#df_maestro_soc = pd.read_table(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"maestrosoc.txt", encoding='utf-8', sep='\t', quotechar='"', low_memory=False)
+_log.info("[TransformCleanKardex] Cargando maestrosoc.txt")
+df_maestro_soc = pd.read_table(
+    base / "maestrosoc.txt",
+    encoding="utf-8",
+    sep="\t",
+    quotechar='"',
+    low_memory=False
+)
 dfkardexorigen = dfkardexorigen.merge(df_maestro_soc[['Sublineas', 'Unidad de Negocios', 'Linea de Negocio']], left_on="Nombre de grupo", right_on="Sublineas", how="left")
 
 # Filtrar filas no deseadas
@@ -70,27 +102,6 @@ dfkardexorigen = dfkardexorigen[(~dfkardexorigen["Comentarios.1"].str.contains("
 
 ##############################################################################################################################
 ##############################################################################################################################
-
-"""
-CONDICIONES NUMERADAS
-para categorizar operaciones de salidas de stock validas para el calculo de la rotacion y analisis de reposicion de stock
-contemplando aquellas operaciones que las netean como documentos de devoluciones, notas de credito, recibos, etc
-
-
-#1. Sin son operaciones de venta o devolucion por venta se categorizan como "Venta Directa"
-#2. Si es una emision para produccion y el codigo padre de la OF comienza en S o MP se categoriza como "Servicio"
-#3. Si es una emision para produccion y el codido padre de la OF no es S o MP se categoriza como "Consumo" dado que es un setting
-#4. Si es un recibo de produccion y el codigo padre es S o MP y el articulo devuelto es diferente al padre entonces se categoriza como "Servicio"
-    .Este caso es una devolucion de materiales no usados en la OF por lo tanto deben netear la emision de produccion
-#5. Es el caso 4 pero cuando el articulo devuelto es igual al padre. En este caso lo que esta ingresando al stock es el resultado de la fabricacion
-    o servicio y por lo tanto debe quedar en blanco, haciendo referencia a una operacion valida de entrada al stock
-#6. Si es un recibo de produccion y el codigo padre no es ni S o MP, entonces se trata de un setting. La operacion de transformacion
-    produce codigos nuevos y es considerada una operacion valida de entrada al stock. Se categoriza en None
-#7 y #8. Las operaciones de salida de mercancias y otros se categorizan en "Consumo". Aunque esto no es del todo preciso
-         no impacta en el analisis de demanda ya que aqui solo se consideran operaciones de Venta Directa y Servicio.
-
-
-"""
 
 
 # Condiciones
@@ -173,10 +184,6 @@ default = dfkardexorigen["Cantidad de entrada"] + dfkardexorigen["Cantidad de sa
 # Aplicar np.select para asignar los valores
 dfkardexorigen["Cantidad unificada"] = np.select(conditions, choices, default=default)
 
-
-
-
-
 # Convertir a tipo numérico
 dfkardexorigen["Cantidad unificada"] = pd.to_numeric(dfkardexorigen["Cantidad unificada"], errors='coerce')
 
@@ -191,26 +198,6 @@ dfkardexorigen["Valor de transacción"] = (
     .astype(float)  # Convertir finalmente a float
 )
     
-
-    
-# dfkardexorigen["Ingreso bruto línea"] = (
-#     dfkardexorigen["Ingreso bruto línea"]
-#     .astype(str)  # Convertir todos los valores a string
-#     .str.replace(',', '', regex=False)  # Remover separadores de miles (coma)
-#     .replace(r'^\s*$', None, regex=True)  # Reemplazar valores vacíos o espacios con None (para que sean NaN)
-#     .astype(float)  # Convertir finalmente a float
-# ) 
-    
-
-# dfkardexorigen["GrssProfit Devol"] = (
-#     dfkardexorigen["GrssProfit Devol"]
-#     .astype(str)  # Convertir todos los valores a string
-#     .str.replace(',', '', regex=False)  # Remover separadores de miles (coma)
-#     .replace(r'^\s*$', None, regex=True)  # Reemplazar valores vacíos o espacios con None (para que sean NaN)
-#     .astype(float)  # Convertir finalmente a float
-# ) 
-
-
 # Agregar columna "Valor unificado"
 dfkardexorigen["Valor unificado"] = -dfkardexorigen["Valor de transacción"]
 

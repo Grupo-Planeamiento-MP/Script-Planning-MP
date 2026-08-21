@@ -2,43 +2,77 @@
 import pandas as pd
 import numpy as np
 import os
+import sys
+import logging
 from pathlib import Path
-import getpass
 import requests
 from calendar import monthrange
 from datetime import datetime
 from openpyxl.utils import get_column_letter
 import calendar
 
-## GLOBALES ##
-### Detecta ruta del script ###
-rutainicial = Path.home()
-usuario = getpass.getuser()
-antes, sep, despues = str(rutainicial).partition(usuario)
-base = Path(antes + sep)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+)
+
+_log = logging.getLogger("Codigo.Main")
+
+
+_log.info("[Main] Inicio - cargando ruta base")
+
+base = Path(__file__).resolve().parent
+
+_log.info("[Main] Ruta base: %s", base)
+sys.path.insert(0, str(base))
 
 
 Linea_Negocio="EQUIPOS TRANS. MATER"
 Lineas_Asociadas = ["EQUIPOS TRANS. MATER"]
 
+_log.info("[Main] Línea de negocio: %s", Linea_Negocio)
 
-
+_log.info("[Main] Paso 1/6 - Ejecutando analisisconsumossap.py")
 ## SCRIPTS ##
-exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"AnalisisConsumosSAP.py", encoding="utf-8").read()) #ResumenPrevKardexwhtAlmacen
-exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"CalculoStockSeguridadLTvariabilityV2.py", encoding="utf-8").read()) #calcular_stock_seguridad_ltvar_opt  identificar_outliers
-exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"FuncionesAbastecimiento.py", encoding="utf-8").read())  #agregar_consumo_promedio ,agregar_consumo_prom_compo, agregar_promedio_forecast_3m_mineria, agregar_fixedcost, agregar_valor_consumo, calcular_totaltransito_comp
-exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"Inventario.py", encoding="utf-8").read()) #ResumenInvSAPBOAstec
-exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"ConexionDatos.py", encoding="utf-8").read()) #dfResumenLeadTimes , df_ensambleETM, #Reporte_Precios_Local_Imp.txt
-exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"CalculoStock0.py", encoding="utf-8").read())
-dfActiveCode = pd.read_csv(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Archivos_Compartidos"/"Querys automatizados"/"dfActiveCode.txt", sep='\t',encoding='utf-8',engine='python')
+exec(open( base / "analisisconsumossap.py",  encoding="utf-8" ).read())
+
+_log.info("[Main] Paso 2/6 - Ejecutando calculostockseguridadltvariabilityv2.py")
+exec( open( base / "calculostockseguridadltvariabilityv2.py",  encoding="utf-8" ).read())
+
+
+_log.info("[Main] Paso 3/6 - Ejecutando funcionesabastecimiento.py")
+exec( open(  base / "funcionesabastecimiento.py", encoding="utf-8" ).read())
+
+
+_log.info("[Main] Paso 4/6 - Ejecutando inventario.py")
+exec( open( base / "inventario.py", encoding="utf-8" ).read())
+
+_log.info("[Main] Paso 5/6 - Ejecutando conexiondatos.py")
+
+exec(open(  base / "conexiondatos.py", encoding="utf-8").read())
+
+_log.info("[Main] Paso 6/6 - Ejecutando calculostock0.py")
+
+exec(open( base / "calculostock0.py", encoding="utf-8").read())
+
+
+_log.info("[Main] Cargando dfActiveCode.txt")
+dfActiveCode = pd.read_csv(
+    base / "dfActiveCode.txt",
+    sep="\t",
+    encoding="utf-8",
+    engine="python"
+)
+
 dfActiveCode = dfActiveCode.query("`Linea de Negocio` in @Lineas_Asociadas")
-#dfActiveCode = dfActiveCode[dfActiveCode['Codigo_SAP'].isin(['A18110000283'])]
 
 ###
 linea_reemplazo = ["EQUIPOS TRANS. MATER"]
 ###
 
 """AJUSTES REMPLAZOS"""
+_log.info("[Main] Ajustes de reemplazos")
 # Resumir cuadro de settings
 #dfMRP_filter = dfMRP[['Producto Final', 'Componente', 'Q']]
 # Obtener item vigente por grupo
@@ -119,14 +153,23 @@ columnas_mantener = [
 dfActiveCode = dfActiveCode[columnas_mantener]
 dfActiveCode.drop(columns = ['En Transito', 'Codigo_Barra', 'Ferreteria', 'Linea de Negocio'], axis=1, inplace=True)
 
+_log.info("[Main] Lead Time")
+
 """LIMPIEZA LEADTIMES"""
 df_articulos = dfActiveCode.rename(columns={"Codigo_SAP": "ItemCode"})
-exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Reporte para lineas"/"Codigo"/"Abastecimiento"/"LimpiezaTiemposTransitov2.py", encoding="utf-8").read())
+#exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Reporte para lineas"/"Codigo"/"Abastecimiento"/"limpiezatiempostransitov2.py", encoding="utf-8").read())
+exec(open( base/"limpiezatiempostransitov2.py", encoding="utf-8-sig").read())
+
+_log.info("[Main] Limpieza de Lead Times terminada.")
+
+_log.info("[Main] Limpieza de consumos")
 
 """LIMPIEZA CONSUMOS"""
 df_consumos_componentes , df_history , df_consumos_standar = limpieza_consumos_setting(ResumenPrevKardexwhtAlmacen,df_componente_consumo,dfMRP_filter,reference_period)    
 df_consumos_componentes_so = df_consumos_componentes[df_consumos_componentes['Outlier'] == 'NO']
 df_consumos_standar_so = df_consumos_standar[df_consumos_standar['Outlier'] == 'NO']
+
+_log.info("[Main] Comparacion de precios")
 
 """COMPARACION DE PRECIOS"""
 df_resultado_ltvar = agregar_compar_precios(dfActiveCode, Reporte_Precios_Local_Imp, 'MP')
@@ -137,40 +180,15 @@ df_resultado_ltvar = calcular_comprometido_comp(df_resultado_ltvar, dfBOMfinal)
 """AGREGAR LOS GRUPOS"""
 df_resultado_ltvar = asignar_grupo_y_jerarquia(df_resultado_ltvar, dfBOMfinal)
 
+_log.info("[Main] Calculando Stock de Seguridad y ROP")
+
 """SS y ROP"""
 df_resultado_ltvar = calcular_stock_seguridad_ltvar(df_resultado_ltvar, df_consumos_componentes_so, df_LeadTime, reference_period)
 ###
 multiplo_ensamble = dict(zip(df_ensambleETM["SAP MARCO"],df_ensambleETM["CANT. ENSAM"]))
 ###
-"""
-if Linea_Negocio == "EQUIPOS TRANS. MATER":
-    for idx, row in df_resultado_ltvar.iterrows():
-        sap = row.get("Codigo_SAP")
-        if sap in multiplo_ensamble:
-            multiplo = pd.to_numeric(multiplo_ensamble[sap], errors="coerce")
-            if pd.notna(multiplo) and multiplo > 0:
-                prom = row.get("Prom_Cons_LT_ltvar")
-                if pd.notna(prom):
-                    # ===================== 95% =====================
-                    if pd.notna(row.get("SS_95_ltvar")):
-                        # Ajustar SS
-                        ss95 = np.ceil(row["SS_95_ltvar"] / multiplo) * multiplo
-                        # Calcular P95 preliminar
-                        p95 = prom + ss95
-                        # Ajustar P95 al múltiplo
-                        p95_ajustado = np.ceil(p95 / multiplo) * multiplo
-                                           
-                        df_resultado_ltvar.at[idx, "SS_95_ltvar"] = int(ss95)
-                        df_resultado_ltvar.at[idx, "P95_ltvar"] = int(p95_ajustado)
-                    # ===================== 98% =====================
-                    if pd.notna(row.get("SS_98_ltvar")):
-                        ss98 = np.ceil(row["SS_98_ltvar"] / multiplo) * multiplo
-                        p98 = prom + ss98
-                        p98_ajustado = np.ceil(p98 / multiplo) * multiplo          
-                        df_resultado_ltvar.at[idx, "SS_98_ltvar"] = int(ss98)
-                        df_resultado_ltvar.at[idx, "P98_ltvar"] = int(p98_ajustado)
-"""
 ###
+_log.info("[Main] Clasificando artículos")
 
 """CLASIFICACION"""
 if Linea_Negocio in ["EQUIPOS TRANS. MATER"]:
@@ -185,12 +203,14 @@ df_resultado_ltvar = clasificacion_comp(df_resultado_ltvar,dfMRP_filter,df_clasi
 
 """AGREGAR COBERTURA STOCK DE SEGURIDAD Y PUNTO MAXIMO"""
 #df_resultado_ltvar = agregar_coberturas_y_ajustes(df_resultado_ltvar)
+_log.info("[Main] Agregando rotacion")
 
 """AGREGAR LA ROTACION"""
 df_resultado_ltvar = agregar_categoria_rotacion(df_resultado_ltvar, ResumenPrevKardexwhtAlmacen, reference_period)
 
 """AGREGAR LA ROTACION COMPONENTE"""
 df_resultado_ltvar = agregar_categoria_rotacion_comp(df_resultado_ltvar, df_componente_consumo, reference_period)
+_log.info("[Main] Agregando inventario")
 
 """AGREGAR EL INVENTARIO DE MINERIA"""
 #df_resultado_ltvar = agregar_stock_disponible_comp(df_resultado_ltvar, dfConsInvPortalUniconSAP, dfBOMfinal)
@@ -273,6 +293,9 @@ if Linea_Negocio in ["EQUIPOS TRANS. MATER"]:
 else:
     df_resultado_ltvar = agregar_stock_disponible_comp(df_resultado_ltvar, dfConsInvPortalUniconSAP, dfBOMfinal)
 
+_log.info("[Main] Agregando consumo promedio")
+
+
 """AGREGAR CONSUMO PROMEDIO"""
 df_resultado_ltvar = agregar_consumo_promedio(df_resultado_ltvar, df_consumos_standar_so,reference_period)
 
@@ -295,6 +318,8 @@ df_resultado_ltvar['Pareto'].fillna('C', inplace=True)
 # Eliminar la columna 'Número de artículo' generada en el merge
 df_resultado_ltvar.drop(columns=['Número de artículo'], inplace=True)
 
+_log.info("[Main] Agregando valor de consumo")
+
 """AGREGAR VALOR DE CONSUMO"""
 df_resultado_ltvar = agregar_valor_consumo(df_resultado_ltvar, ResumenPrevKardexwhtAlmacen, reference_period)
     
@@ -306,6 +331,8 @@ df_resultado_ltvar = calcular_totaltransito_comp(df_resultado_ltvar, FreservSAP_
 # Rotacion ficticia para asignacion de valores
 df_resultado_ltvar['Rotacion_F'] = df_resultado_ltvar['Categoria Rot Comp'].replace(0, pd.NA).fillna(df_resultado_ltvar['Categoria Rot'])
  
+_log.info("[Main] Agregando transito por fechas")
+
 """AGREGAR EL TRANSITO POR FECHAS"""
 hoy = pd.Timestamp.today().normalize()
 df_resultado_ltvar = generar_transito_por_fechas(df_resultado_ltvar, FreservSAP_filtrado, SeguiBOSAP_f)
@@ -313,9 +340,11 @@ df_resultado_ltvar["Fecha_LLegada"] = (df_resultado_ltvar["Fecha_LLegada"].filln
 df_resultado_ltvar["Fecha_LLegada"] = pd.to_datetime(df_resultado_ltvar["Fecha_LLegada"], errors="coerce")
 df_resultado_ltvar["Fecha_LLegada"] = df_resultado_ltvar["Fecha_LLegada"].dt.normalize()
 
+_log.info("[Main] Agregando Stock Cero")
 """AGREGAR STOCK 0"""
 if Linea_Negocio == "EQUIPOS TRANS. MATER":
-    exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"CalculoStock0ETM.py", encoding="utf-8").read())
+    #exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/"calculostock0etm.py", encoding="utf-8").read())
+    exec(open( base / "calculostock0etm.py", encoding="utf-8").read()   )
 
 #Agregar Stock Cero
 df_resultado_ltvar = pd.merge(df_resultado_ltvar, resultado_Stock_Cero[['ItemCode', 'Stock Cero (%)']], left_on='Codigo_SAP', right_on='ItemCode', how='left')
@@ -357,11 +386,15 @@ df_resultado_ltvar = df_resultado_ltvar.rename(columns={
 #df_resultado_ltvar["Posicion de Inventario (PI)"] = (df_resultado_ltvar["Stock Disponible-C"] - df_resultado_ltvar["Comprometido - C"] + df_resultado_ltvar["Transito Total - C"])
 df_resultado_ltvar["Posicion de Inventario (PI)"] = (df_resultado_ltvar["Stock Disponible-C"]+ df_resultado_ltvar["Transito Total - C"])
 
+_log.info("[Main] Agregando Cobertura Stock")
+
 """AGREGAR COBERTURA STOCK"""
 df_resultado_ltvar["Cobertura Stock Fisico"]=df_resultado_ltvar["Stock Disponible-C"]/df_resultado_ltvar["Consumo Promedio Comp 12M"]
 
 """AGREGAR COBERTURA STOCK + TRANSITO"""
 df_resultado_ltvar["Cobertura Stock + Transito"]=df_resultado_ltvar["Posicion de Inventario (PI)"]/df_resultado_ltvar["Consumo Promedio Comp 12M"]
+
+_log.info("[Main] Agregando Nivel de Servicio")
 
 """AGREGAR NIVEL DE SERVICIO"""
 df_resultado_ltvar["Nivel de Servicio"] = np.where(   
@@ -418,6 +451,8 @@ df_resultado_ltvar["Punto de reorden"] = np.where(
 
 df_resultado_ltvar["Cobertura (Punto de Reorden)"]=df_resultado_ltvar["Punto de reorden"]/df_resultado_ltvar["Consumo Promedio Comp 12M"]
 
+_log.info("[Main] Agregando Consumo Mes Actual")
+
 """AGREGAR CONSUMO DEL MES ACTUAL"""
 df_resultado_ltvar = pd.merge(
 df_resultado_ltvar, 
@@ -461,6 +496,8 @@ if Linea_Negocio == "LUBRICACION MINERIA":
     """AGREGAR KPIS ULTIMO MES """
     df_resultado_ltvar=KPI_forecast(df_resultado_ltvar,df_KPI)
 
+_log.info("[Main] Agregando Sotck Fisico -Forecast")
+
 """ AGREGAR COBERTURA STOCK FISICO - FORECAST""" 
 #df_forecast = df_forecast[df_forecast['SAP_Origen'].isin(['A18110001845'])]
 df_resultado_ltvar=cobertura_forecast(df_resultado_ltvar, df_forecast, primer_dia_mes_actual,"Stock Disponible-C")
@@ -470,12 +507,15 @@ df_resultado_ltvar = df_resultado_ltvar.rename(columns={"Meses_Forecast": "Cober
 df_resultado_ltvar=cobertura_forecast(df_resultado_ltvar, df_forecast, primer_dia_mes_actual,"Posicion de Inventario (PI)")
 df_resultado_ltvar = df_resultado_ltvar.rename(columns={"Meses_Forecast": "Cobertura Stock + Transito - Forecast"})
 
+_log.info("[Main] Agregando Punto de Reorden -Forecast")
+
 """AGREGAR  PUNTO DE REORDEN - FORECAST"""
 df_resultado_ltvar=unidades_forecast(df_resultado_ltvar,df_forecast,"Cobertura (Punto de Reorden)",primer_dia_mes_actual)
 df_resultado_ltvar = df_resultado_ltvar.rename(columns={"Unidades forecast": "Punto de reorden - Forecast"})
 
 df_resultado_ltvar = ajustar_multiplo_ensamble(df_resultado_ltvar, "Punto de reorden - Forecast", multiplo_ensamble)
 
+_log.info("[Main] Agregando  Punto de Reorden -Forecast Ajustado")
 
 """AGREGAR PUNTO DE REORDEN - FORECAST Ajustado"""
 df_resultado_ltvar = unidades_despues_LT(df_resultado_ltvar, df_forecast,"Cobertura (Punto de Reorden)")
@@ -483,6 +523,7 @@ df_resultado_ltvar = df_resultado_ltvar.rename(columns={"Unidades_despues_LT": "
 
 df_resultado_ltvar = ajustar_multiplo_ensamble(df_resultado_ltvar,"Punto de reorden - Forecast Ajustado", multiplo_ensamble)
 
+_log.info("[Main] Agregando  SS")
 
 """AGREGAR  STOCK MINIMO - FORECAST"""
 df_resultado_ltvar=unidades_forecast(df_resultado_ltvar,df_forecast,"Cobertura (Stock Minimo)",primer_dia_mes_actual)
@@ -490,17 +531,20 @@ df_resultado_ltvar = df_resultado_ltvar.rename(columns={"Unidades forecast": "St
 
 df_resultado_ltvar = ajustar_multiplo_ensamble(df_resultado_ltvar,"Stock Minimo - Forecast", multiplo_ensamble)
 
+_log.info("[Main] Agregando  Sugerencia de Compra")
 
 """AGREGAR SUGERENCIA DE COMPRA"""
 df_resultado_ltvar = unidades_despues_LT(df_resultado_ltvar, df_forecast,"Promedio_LT")
 df_resultado_ltvar.rename(columns={"Unidades_despues_LT": "Unidades_segundo_LT"}, inplace=True)
 df_resultado_ltvar = sugerencia_compra_forecast_DOS(df_resultado_ltvar,df_forecast)
+_log.info("[Main] Agregando  Cobertura Sugerencia de Compra")
 
 #df_forecast = df_forecast[df_forecast["SAP_Origen"] == "A18110000283"]
 """AGREGAR COBERTURA DE COMPRA"""
 df_resultado_ltvar=cobertura_despues_LT(df_resultado_ltvar, df_forecast,"Sugerencia de Compra")
 df_resultado_ltvar = df_resultado_ltvar.rename(columns={"Meses_Forecast": "Cobertura (Compra) - Forecast"})
 cobertura_condicion="Cobertura Stock Fisico - Forecast"
+_log.info("[Main] Agregando  Alerta")
 
 """AGREGAR ALERTA DE COMPRA"""
 ###esto con orden de compra
@@ -543,6 +587,7 @@ df_resultado_ltvar["Alerta"] =  np.where(
         )
     
     )
+_log.info("[Main] Ordenar Data Frame Final")
 
 """ORDENAR EL DATAFRAME FINAL"""
 # Clasificacion ajustes
@@ -562,6 +607,9 @@ df_resultado_ltvar = df_resultado_ltvar.sort_values(
     by=["Orden Categoria", "Valor de Consumo"],
     ascending=[True, False]
 )
+
+_log.info("[Main] Hoja Simulacion")
+
 
 if Linea_Negocio in ["LUBRICACION MINERIA","HIDRAULI. COMPONENTE","EQUIPOS TRANS. MATER"]:
     """REPORTE SIMULACION IN/OUT"""
@@ -817,6 +865,7 @@ if Linea_Negocio == "HIDRAULI. COMPONENTE":
         if col not in columnas_eliminar
     ]
     
+_log.info("[Main] Columna Comentario")
 
 ######
 if Linea_Negocio == "EQUIPOS TRANS. MATER":
@@ -856,6 +905,8 @@ if Linea_Negocio == "HIDRAULI. COMPONENTE":
     df_pesca = df_reporte[df_reporte["Codigo_SAP"].astype(str).isin(codigos_pesca)].copy()
     df_reporte = df_reporte[~df_reporte["Codigo_SAP"].astype(str).isin(codigos_pesca)].copy()
     df_pesca=df_pesca.drop(columns=["Tipo"])
+
+_log.info("[Main] Exportacion de Datos")
 
 """EXPORTACION DE DATOS"""
 mes_actual = pd.Timestamp.today()
@@ -903,10 +954,9 @@ if Linea_Negocio in ["LUBRICACION MINERIA","HIDRAULI. COMPONENTE","EQUIPOS TRANS
     hojas["Simulaciones"] = df_final
 
 
-output = (base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/ f"Reporte_Abastecimiento_{Linea_Negocio}_{mes_anio}_prueba.xlsx")
-
+#output = (base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Pruebas Linux"/ f"Reporte_Abastecimiento_{Linea_Negocio}_{mes_anio}_prueba.xlsx")
+output = base / f"Reporte_Abastecimiento_{Linea_Negocio}_{mes_anio}_prueba.xlsx"
 #archivo_excel = f"Reporte_Abastecimiento_{Linea_Negocio}_{mes_anio}.xlsx"
-
 
 with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
 
@@ -1191,3 +1241,4 @@ with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                             )
 
     print("Archivo Excel creado con éxito en:", output)
+    _log.info("[Main] Reporte guardado: %s", output)

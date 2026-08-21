@@ -1,19 +1,42 @@
 import pandas as pd
-import datetime
+#import datetime
+from datetime import datetime
 import numpy as np
 import os
 from pathlib import Path
 import getpass
+import logging
+_log = logging.getLogger("Codigo.CalculoStock0ETM")
+
 
 ### Detecta ruta del script y redirige las demas direcciones path ###
-rutainicial = Path.home()
-usuario = getpass.getuser()
-antes, sep, despues = str(rutainicial).partition(usuario)
-base = Path(antes + sep)
+
+
+_log.info("[CalculoStock0ETM] Inicio")
+
+base = Path(__file__).resolve().parent
+
+_log.info("[CalculoStock0ETM] Ruta base: %s", base)
+
+
+Linea_Negocio = Linea_Negocio
+
+_log.info("[CalculoStock0ETM] Cargando dfkardexorigen.txt")
+
 print("CalculoStock0 - OK")
 #exec(open(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Proyectos"/"Python"/"Conexiones_a_SAP"/"KardexGeneralProv.py", encoding="utf-8-sig").read())
-dfkardexorigen = pd.read_csv(base/"MARCO PERUANA SA"/"Planeamiento de Inventarios - Documents"/"Archivos_Compartidos"/"Querys automatizados"/"dfkardexorigen.txt", sep="|", encoding="utf-8",on_bad_lines="skip")
 
+dfkardexorigen = pd.read_csv(
+    base / "dfkardexorigen.txt",
+    sep="|",
+    encoding="utf-8",
+    on_bad_lines="skip"
+)
+
+_log.info(
+    "[CalculoStock0ETM] dfkardexorigen cargado. Filas: %d",
+    len(dfkardexorigen)
+)
 
 dfkardexHC=dfkardexorigen[dfkardexorigen["Nombre de grupo"]==Linea_Negocio]
 
@@ -91,17 +114,10 @@ entrada_neta_full["Inventario final"] = entrada_neta_full.groupby("Número de ar
 
 # entrada_neta_full["Inventario final"] = entrada_neta_full.groupby("Número de artículo")["Inventario final"].ffill().fillna(0)
 # entrada_neta_full["Entrada neta"] = entrada_neta_full["Entrada neta"].fillna(0)
-prueba = entrada_neta_full[entrada_neta_full["Número de artículo"] == 'A18110002183']
-"""
 
-EXPORTACION DE DATOS
+_log.info("[CalculoStock0ETM] Fin")
 
-"""
 
-#output = "C://Users//AnthonyPradoCornejo//OneDrive - MARCO PERUANA SA//Escritorio//Rotacion Incubadoras-Electro-Frio//HIDRAULICA COMPONENTE//pruebakardexdiario.xlsx"
-
-#with pd.ExcelWriter(output) as writer:
-#    prueba.to_excel(writer, sheet_name="Reporte", index=False)
 
 #Definimos la funcion
 def calcular_stock_cero_por_grupo(grupo, fecha_limite_min, fecha_limite_max):
@@ -210,20 +226,38 @@ def calcular_stock_cero_por_grupo(grupo, fecha_limite_min, fecha_limite_max):
 
 
 # Fecha actual
-hoy = pd.to_datetime("today").normalize()
-# Primer día del mes actual
-primer_dia_mes_actual = hoy.replace(day=1)
-# Último día del mes pasado = (primer día del mes actual) - 1 día
-fecha_limite_max = primer_dia_mes_actual - pd.Timedelta(days=1)
-# Primer día del mes 24 meses antes de fecha_limite_max
-fecha_limite_min = (fecha_limite_max.replace(day=1) - pd.DateOffset(months=23)).normalize()
 
-resultado = entrada_neta_full.groupby('Número de artículo', group_keys=False).apply(
+fecha_limite_min = pd.Timestamp("2025-01-01")
+fecha_limite_max = pd.Timestamp("2025-12-31")
+
+resultado = entrada_neta_full.groupby('Número de artículo',group_keys=False).apply(
     calcular_stock_cero_por_grupo,
     fecha_limite_min=fecha_limite_min,
     fecha_limite_max=fecha_limite_max
 )
+
+
+
 resultado_Stock_Cero = resultado.reset_index(drop=True)
+
+lista_sap_unicon = df_Unicon_SAP["SAP"].unique()
+detalleUnicon = entrada_neta_full[
+    (entrada_neta_full["Fecha"] >= fecha_limite_min) &
+    (entrada_neta_full["Fecha"] <= fecha_limite_max)
+].copy()
+detalleUnicon = detalleUnicon[
+    detalleUnicon["Número de artículo"].isin(lista_sap_unicon)
+]
+
+
+#detalleUnicon = detalleUnicon[detalleUnicon["Inventario final"] == 0]
+
+# Ordenar
+detalleUnicon = detalleUnicon.sort_values(
+    by=["Número de artículo", "Fecha"]
+)
+
+detalleUnicon = detalleUnicon.reset_index(drop=True)
 
 """Ajuste"""
 fecha_limite_min2 = pd.to_datetime("2022-12-01")
@@ -238,10 +272,3 @@ resultado2.rename(columns={"Stock Cero (%)": "Stock Cero (%)1"}, inplace=True)
 resultado_Stock_Cero = resultado.reset_index(drop=True)
 resultado_Stock_Cero2 = resultado2.reset_index(drop=True)
 
-# EXPORTACION DE DATOS
-#Exportacion
-#output = "C:/Users/planner01/Desktop/Proyectos/Python/Clasificacion Articulos/Resultados/CalculoStock0.txt"
-#output2 = "C:/Users/planner01/Desktop/Proyectos/Python/Clasificacion Articulos/Resultados/stockdiario.txt"
-
-#resultado_Stock_Cero.to_csv(output, sep='\t', index=False, encoding='utf-8')
-#entrada_neta_full.to_csv(output2, sep='\t', index=False, encoding='utf-8')

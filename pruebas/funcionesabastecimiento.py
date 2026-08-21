@@ -9,15 +9,6 @@ import math
 from datetime import datetime, timedelta
 
 
-"""def identificar_outliers(df):
-    Q1 = df['Consumo Total'].quantile(0.25)
-    Q3 = df['Consumo Total'].quantile(0.75)
-    IQR = Q3 - Q1
-    lower_bound = Q1 - 1.5 * IQR
-    upper_bound = Q3 + 1.5 * IQR
-    # Devuelve una Serie con la etiqueta 'SI' para outliers y 'NO' para no outliers
-    return pd.Series(np.where((df['Consumo Total'] < lower_bound) | (df['Consumo Total'] > upper_bound), 'SI', 'NO'), index=df.index)
-"""
 def identificar_outliers(x):
     Q1 = x.quantile(0.25)
     Q3 = x.quantile(0.75)
