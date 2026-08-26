@@ -11,6 +11,11 @@ from datetime import datetime
 from openpyxl.utils import get_column_letter
 import calendar
 
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.application import MIMEApplication
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -1242,3 +1247,101 @@ with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
 
     print("Archivo Excel creado con éxito en:", output)
     _log.info("[Main] Reporte guardado: %s", output)
+    
+
+
+"""ENVIO DE CORREO"""
+
+print("FUNCION ENVIAR CORREO: PRINT")
+
+_log.info("[Main] Iniciando envío de correo")
+
+destinatarios = [
+
+    "sflores@marco.com.pe"
+    #"planeamiento.inventarios@marco.com.pe"
+]
+
+remitente = os.environ.get("EMAIL_USER")
+clave = os.environ.get("EMAIL_PASS")
+
+numero_semana = pd.Timestamp.today().isocalendar().week
+
+asunto = f"SEM {numero_semana}: Reporte de Abastecimiento - EQUIPOS TRANS. MATER"
+
+mensaje = MIMEMultipart()
+mensaje["From"] = remitente
+mensaje["To"] = ", ".join(destinatarios)
+mensaje["Subject"] = asunto
+
+cuerpo_html = f"""
+<html>
+<body style="font-family: Arial, sans-serif; color: #333333;">
+
+<p>Estimados(as),</p>
+
+<p>
+Adjunto envío el <strong>Reporte de Abastecimiento de Equipos de
+Transmisión de Materiales</strong>, correspondiente al periodo actual.
+</p>
+
+<p>
+El archivo contiene el detalle del reporte de abastecimiento,
+inventario y demás información utilizada para la planificación.
+</p>
+
+<p>
+Saludos cordiales,<br>
+<strong>Planeamiento de Inventarios</strong>
+</p>
+
+</body>
+</html>
+"""
+
+mensaje.attach(MIMEText(cuerpo_html, "html"))
+
+nombre_archivo = os.path.basename(output)
+
+with open(output, "rb") as adjunto:
+    parte_adjunto = MIMEApplication(
+        adjunto.read(),
+        _subtype="xlsx"
+    )
+
+parte_adjunto.add_header(
+    "Content-Disposition",
+    "attachment",
+    filename=nombre_archivo
+)
+
+mensaje.attach(parte_adjunto)
+
+
+try:
+
+    _log.info("[Main] Conectando con servidor SMTP")
+
+    servidor = smtplib.SMTP("smtp.office365.com", 587)
+    servidor.starttls()
+
+    _log.info("[Main] Iniciando sesión de correo")
+
+    servidor.login(remitente, clave)
+
+    _log.info("[Main] Enviando correo a: %s", destinatarios)
+
+    servidor.sendmail(
+        remitente,
+        destinatarios,
+        mensaje.as_string()
+    )
+
+    servidor.quit()
+
+    _log.info("[Main] Correo enviado correctamente")
+
+except Exception as e:
+
+    _log.error("[Main] Error al enviar correo: %s", e)
+    
